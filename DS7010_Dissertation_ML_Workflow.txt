@@ -1,0 +1,2115 @@
+# ============================================================
+# 1. UPLOAD DATASET
+# ============================================================
+
+from google.colab import files
+from google.colab import drive
+import io
+import os
+import numpy as np
+import pandas as pd
+
+uploaded = files.upload()
+file_name = next(iter(uploaded))
+
+df = pd.read_csv(
+    io.BytesIO(uploaded[file_name]),
+    low_memory=False
+)
+
+print("File loaded:", file_name)
+print("Dataset shape:", df.shape)
+display(df.head())
+
+
+# ============================================================
+# 2. MOUNT GOOGLE DRIVE
+# ============================================================
+
+drive.mount("/content/drive")
+
+project_dir = "/content/drive/MyDrive/DS7010_ML_Project"
+
+print("Google Drive mounted.")
+
+
+# ============================================================
+# 3. SAVE ORIGINAL DATASET
+# ============================================================
+
+df.to_csv(
+    os.path.join(
+        project_dir,
+        "01_Data/Raw/01_Original_Dataset.csv"
+    ),
+    index=False
+)
+
+print("Original dataset saved.")
+
+
+# ============================================================
+# 4. RAW DATA INSPECTION
+# ============================================================
+
+numeric_columns = df.select_dtypes(
+    include=np.number
+).columns.tolist()
+
+categorical_columns = df.select_dtypes(
+    include=["object", "category"]
+).columns.tolist()
+
+print("Rows:", df.shape[0])
+print("Columns:", df.shape[1])
+print("Numerical variables:", len(numeric_columns))
+print("Categorical variables:", len(categorical_columns))
+print("Duplicate rows:", df.duplicated().sum())
+print("Total missing values:", df.isnull().sum().sum())
+
+if "LSOA_Code" in df.columns:
+    print(
+        "Duplicate LSOA codes:",
+        df["LSOA_Code"].duplicated().sum()
+    )
+
+display(df.head())
+display(df.tail())
+
+
+# ============================================================
+# 5. VARIABLE INSPECTION
+# ============================================================
+
+inspection = pd.DataFrame({
+    "Data_Type": df.dtypes.astype(str),
+    "Missing_Values": df.isnull().sum(),
+    "Missing_Percentage": (df.isnull().mean() * 100).round(2),
+    "Unique_Values": df.nunique()
+})
+
+display(inspection)
+
+inspection.to_csv(
+    os.path.join(
+        project_dir,
+        "02_Output/Raw_Data_Inspection/Variable_Inspection.csv"
+    )
+)
+
+
+# ============================================================
+# 6. NUMERICAL VALUE CHECK
+# ============================================================
+
+value_check = pd.DataFrame({
+    "Negative_Values":
+        (df[numeric_columns] < 0).sum(),
+
+    "Values_Above_100":
+        (df[numeric_columns] > 100).sum()
+})
+
+display(value_check)
+
+value_check.to_csv(
+    os.path.join(
+        project_dir,
+        "02_Output/Raw_Data_Inspection/Numerical_Value_Check.csv"
+    )
+)
+
+
+# ============================================================
+# 7. DEFINE VARIABLES
+# ============================================================
+
+target = "Unemployment_Rate"
+
+id_columns = [
+    column
+    for column in ["LSOA_Code", "LSOA_Name"]
+    if column in df.columns
+]
+
+categorical_columns = [
+    column
+    for column in [
+        "RUC21CD",
+        "RUC21NM",
+        "Urban_Rural_Flag"
+    ]
+    if column in df.columns
+]
+
+predictor_columns = [
+    column
+    for column in df.columns
+    if column not in id_columns + [target]
+]
+
+print("Target:", target)
+print("Identifiers:", id_columns)
+print("Predictors:", len(predictor_columns))
+print("Categorical variables:", categorical_columns)
+
+
+# ============================================================
+# 8. REVIEW CATEGORIES
+# ============================================================
+
+for column in categorical_columns:
+
+    print("\n", column)
+
+    display(
+        df[column]
+        .value_counts(dropna=False)
+        .to_frame("Count")
+    )
+
+
+# ============================================================
+# 9. REMOVE REDUNDANT CATEGORY CODE
+# ============================================================
+
+if "RUC21CD" in df.columns:
+    df = df.drop(columns=["RUC21CD"])
+    print("RUC21CD removed.")
+
+
+# ============================================================
+# 10. MISSING-VALUE ANALYSIS
+# ============================================================
+
+missing_summary = pd.DataFrame({
+    "Missing_Values": df.isnull().sum(),
+    "Missing_Percentage":
+        (df.isnull().mean() * 100).round(2)
+}).sort_values(
+    "Missing_Percentage",
+    ascending=False
+)
+
+display(missing_summary)
+
+print(
+    "Total missing values:",
+    df.isnull().sum().sum()
+)
+
+missing_summary.to_csv(
+    os.path.join(
+        project_dir,
+        "02_Output/Raw_Data_Inspection/Missing_Value_Summary.csv"
+    )
+)
+
+
+# ============================================================
+# 11. SAVE FEATURE-ENGINEERED DATASET
+# ============================================================
+
+df.to_csv(
+    os.path.join(
+        project_dir,
+        "01_Data/Processed/02_Feature_Engineered_Dataset.csv"
+    ),
+    index=False
+)
+
+print("Feature-engineered dataset saved.")
+
+
+# ============================================================
+# 12. SUMMARY STATISTICS AND OUTLIERS
+# ============================================================
+
+numeric_columns = df.select_dtypes(
+    include=np.number
+).columns.tolist()
+
+summary = df[numeric_columns].describe().T
+
+summary["Median"] = df[numeric_columns].median()
+summary["Variance"] = df[numeric_columns].var()
+summary["IQR"] = summary["75%"] - summary["25%"]
+summary["Skewness"] = df[numeric_columns].skew()
+
+outlier_counts = []
+
+for column in numeric_columns:
+
+    q1 = df[column].quantile(0.25)
+    q3 = df[column].quantile(0.75)
+
+    iqr = q3 - q1
+
+    lower = q1 - 1.5 * iqr
+    upper = q3 + 1.5 * iqr
+
+    count = (
+        (df[column] < lower) |
+        (df[column] > upper)
+    ).sum()
+
+    outlier_counts.append(count)
+
+summary["Outlier_Count"] = outlier_counts
+summary["Outlier_Percentage"] = (
+    summary["Outlier_Count"] / len(df) * 100
+)
+
+display(summary.round(4))
+
+summary.to_csv(
+    os.path.join(
+        project_dir,
+        "02_Output/Raw_Data_Inspection/Summary_Statistics.csv"
+    )
+)
+
+
+# ============================================================
+# 13. BEFORE-TREATMENT EDA
+# ============================================================
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set_style("whitegrid")
+
+numeric_columns = df.select_dtypes(
+    include=np.number
+).columns.tolist()
+
+histogram_path = os.path.join(
+    project_dir,
+    "02_Output/Before_Treatment_EDA/Histogram"
+)
+
+boxplot_path = os.path.join(
+    project_dir,
+    "02_Output/Before_Treatment_EDA/Boxplot"
+)
+
+categorical_plot_path = os.path.join(
+    project_dir,
+    "02_Output/Before_Treatment_EDA/Categorical"
+)
+
+# Histograms
+for column in numeric_columns:
+
+    plt.figure(figsize=(6, 4))
+
+    sns.histplot(
+        data=df,
+        x=column,
+        bins=30,
+        stat="density",
+        color="steelblue",
+        edgecolor="white",
+        alpha=0.75
+    )
+
+    sns.kdeplot(
+        data=df,
+        x=column,
+        color="red",
+        linewidth=2
+    )
+
+    plt.xlabel(column)
+    plt.ylabel("Density")
+    sns.despine()
+    plt.tight_layout()
+
+    plt.savefig(
+        os.path.join(
+            histogram_path,
+            f"{column}.png"
+        ),
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close()
+
+# Boxplots
+for column in numeric_columns:
+
+    plt.figure(figsize=(4, 6))
+
+    sns.boxplot(
+        data=df,
+        y=column,
+        width=0.45
+    )
+
+    plt.xlabel("")
+    plt.ylabel(column)
+    plt.tight_layout()
+
+    plt.savefig(
+        os.path.join(
+            boxplot_path,
+            f"{column}.png"
+        ),
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close()
+
+# Categorical plots
+plot_columns = [
+    column
+    for column in [
+        "RUC21NM",
+        "Urban_Rural_Flag"
+    ]
+    if column in df.columns
+]
+
+for column in plot_columns:
+
+    plt.figure(figsize=(10, 5))
+
+    sns.countplot(
+        data=df,
+        x=column,
+        order=df[column].value_counts().index
+    )
+
+    plt.xlabel(column)
+    plt.ylabel("Count")
+
+    plt.xticks(
+        rotation=45,
+        ha="right"
+    )
+
+    plt.tight_layout()
+
+    plt.savefig(
+        os.path.join(
+            categorical_plot_path,
+            f"{column}.png"
+        ),
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close()
+
+print("Before-treatment EDA saved.")
+
+
+# ============================================================
+# 14. DATA TREATMENT
+# ============================================================
+
+from scipy.stats.mstats import winsorize
+
+treated_data = df.copy()
+
+numeric_columns = treated_data.select_dtypes(
+    include=np.number
+).columns.tolist()
+
+treatment_summary = []
+
+for column in numeric_columns:
+
+    original_skew = treated_data[column].skew()
+
+    q1 = treated_data[column].quantile(0.25)
+    q3 = treated_data[column].quantile(0.75)
+
+    iqr = q3 - q1
+
+    lower = q1 - 1.5 * iqr
+    upper = q3 + 1.5 * iqr
+
+    outlier_count = (
+        (treated_data[column] < lower) |
+        (treated_data[column] > upper)
+    ).sum()
+
+    treated_data[column] = np.asarray(
+        winsorize(
+            treated_data[column].astype(float),
+            limits=[0.01, 0.01]
+        ),
+        dtype=float
+    )
+
+    winsor_skew = treated_data[column].skew()
+    transformation = "None"
+
+    if (
+        column != target
+        and winsor_skew > 1
+        and treated_data[column].min() >= 0
+    ):
+
+        treated_data[column] = np.log1p(
+            treated_data[column]
+        )
+
+        transformation = "Log1p"
+
+    treatment_summary.append({
+        "Variable": column,
+        "Original_Skewness": original_skew,
+        "Original_Outlier_Count": outlier_count,
+        "Original_Outlier_Percentage":
+            outlier_count / len(df) * 100,
+        "After_Winsorisation_Skewness":
+            winsor_skew,
+        "Transformation": transformation,
+        "Final_Skewness":
+            treated_data[column].skew()
+    })
+
+treatment_summary = pd.DataFrame(
+    treatment_summary
+)
+
+display(treatment_summary.round(4))
+
+
+# ============================================================
+# 15. SAVE TREATED DATA
+# ============================================================
+
+treated_data.to_csv(
+    os.path.join(
+        project_dir,
+        "02_Output/Data_Treatment/03_Treated_Dataset.csv"
+    ),
+    index=False
+)
+
+treatment_summary.to_csv(
+    os.path.join(
+        project_dir,
+        "02_Output/Data_Treatment/Treatment_Summary.csv"
+    ),
+    index=False
+)
+
+print("Treated dataset saved.")
+
+
+# ============================================================
+# 16. BEFORE AND AFTER DISTRIBUTIONS
+# ============================================================
+
+from scipy.stats import gaussian_kde
+
+comparison_path = os.path.join(
+    project_dir,
+    "02_Output/After_Treatment_EDA/Histogram_Comparison"
+)
+
+common_columns = [
+    column
+    for column in treated_data.select_dtypes(
+        include=np.number
+    ).columns
+    if column in df.columns
+]
+
+for column in common_columns:
+
+    before = df[column].dropna()
+    after = treated_data[column].dropna()
+
+    fig, axes = plt.subplots(
+        1,
+        2,
+        figsize=(12, 4),
+        sharey=True
+    )
+
+    before_counts, before_bins, _ = axes[0].hist(
+        before,
+        bins=30,
+        color="steelblue",
+        edgecolor="white",
+        linewidth=0.5,
+        alpha=0.8
+    )
+
+    if before.nunique() > 1:
+
+        kde = gaussian_kde(before)
+
+        x = np.linspace(
+            before.min(),
+            before.max(),
+            500
+        )
+
+        bin_width = np.mean(
+            np.diff(before_bins)
+        )
+
+        axes[0].plot(
+            x,
+            kde(x) * len(before) * bin_width,
+            color="red",
+            linewidth=2.5
+        )
+
+    after_counts, after_bins, _ = axes[1].hist(
+        after,
+        bins=30,
+        color="steelblue",
+        edgecolor="white",
+        linewidth=0.5,
+        alpha=0.8
+    )
+
+    if after.nunique() > 1:
+
+        kde = gaussian_kde(after)
+
+        x = np.linspace(
+            after.min(),
+            after.max(),
+            500
+        )
+
+        bin_width = np.mean(
+            np.diff(after_bins)
+        )
+
+        axes[1].plot(
+            x,
+            kde(x) * len(after) * bin_width,
+            color="red",
+            linewidth=2.5
+        )
+
+    axes[0].set_xlabel(
+        "Before Treatment",
+        fontsize=11
+    )
+
+    axes[1].set_xlabel(
+        "After Treatment",
+        fontsize=11
+    )
+
+    fig.suptitle(
+        f"{column} Distribution",
+        fontsize=14,
+        fontweight="bold"
+    )
+
+    fig.supylabel(
+        "Frequency",
+        fontsize=11
+    )
+
+    sns.despine()
+
+    plt.tight_layout(
+        rect=[0.03, 0, 1, 0.93]
+    )
+
+    plt.savefig(
+        os.path.join(
+            comparison_path,
+            f"{column}_Before_After.png"
+        ),
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close()
+
+print("Distribution comparisons saved.")
+
+
+# ============================================================
+# 17. BEFORE AND AFTER BOXPLOTS
+# ============================================================
+
+comparison_path = os.path.join(
+    project_dir,
+    "02_Output/After_Treatment_EDA/Boxplot_Comparison"
+)
+
+for column in common_columns:
+
+    fig, axes = plt.subplots(
+        1,
+        2,
+        figsize=(8, 6),
+        sharey=True
+    )
+
+    sns.boxplot(
+        data=df,
+        y=column,
+        color="steelblue",
+        width=0.45,
+        ax=axes[0]
+    )
+
+    sns.boxplot(
+        data=treated_data,
+        y=column,
+        color="steelblue",
+        width=0.45,
+        ax=axes[1]
+    )
+
+    axes[0].set_xlabel(
+        "Before Treatment",
+        fontsize=11
+    )
+
+    axes[1].set_xlabel(
+        "After Treatment",
+        fontsize=11
+    )
+
+    axes[0].set_ylabel("")
+    axes[1].set_ylabel("")
+
+    fig.suptitle(
+        f"{column} Boxplot",
+        fontsize=14,
+        fontweight="bold"
+    )
+
+    sns.despine()
+
+    plt.tight_layout(
+        rect=[0, 0, 1, 0.94]
+    )
+
+    plt.savefig(
+        os.path.join(
+            comparison_path,
+            f"{column}_Before_After.png"
+        ),
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close()
+
+print("Boxplot comparisons saved.")
+
+
+# ============================================================
+# 18. TARGET VS PREDICTORS
+# ============================================================
+
+comparison_path = os.path.join(
+    project_dir,
+    "02_Output/After_Treatment_EDA/Target_vs_Predictors_Comparison"
+)
+
+before_sample = df.sample(
+    n=min(5000, len(df)),
+    random_state=42
+)
+
+after_sample = treated_data.sample(
+    n=min(5000, len(treated_data)),
+    random_state=42
+)
+
+treated_predictors = [
+    column
+    for column in treated_data.select_dtypes(
+        include=np.number
+    ).columns
+    if column != target
+]
+
+for column in treated_predictors:
+
+    if column not in df.columns:
+        continue
+
+    fig, axes = plt.subplots(
+        1,
+        2,
+        figsize=(12, 5),
+        sharey=True
+    )
+
+    sns.regplot(
+        data=before_sample,
+        x=column,
+        y=target,
+        scatter_kws={
+            "s": 12,
+            "alpha": 0.30,
+            "color": "steelblue"
+        },
+        line_kws={
+            "color": "red",
+            "linewidth": 2
+        },
+        ci=None,
+        ax=axes[0]
+    )
+
+    sns.regplot(
+        data=after_sample,
+        x=column,
+        y=target,
+        scatter_kws={
+            "s": 12,
+            "alpha": 0.30,
+            "color": "steelblue"
+        },
+        line_kws={
+            "color": "red",
+            "linewidth": 2
+        },
+        ci=None,
+        ax=axes[1]
+    )
+
+    axes[0].set_xlabel(
+        "Before Treatment",
+        fontsize=11
+    )
+
+    axes[1].set_xlabel(
+        "After Treatment",
+        fontsize=11
+    )
+
+    axes[0].set_ylabel(
+        target,
+        fontsize=11
+    )
+
+    axes[1].set_ylabel("")
+
+    fig.suptitle(
+        f"{target} vs {column}",
+        fontsize=14,
+        fontweight="bold"
+    )
+
+    sns.despine()
+
+    plt.tight_layout(
+        rect=[0, 0, 1, 0.94]
+    )
+
+    plt.savefig(
+        os.path.join(
+            comparison_path,
+            f"{target}_vs_{column}_Before_After.png"
+        ),
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close()
+
+print("Target relationship plots saved.")
+
+
+# ============================================================
+# 19. CORRELATION ANALYSIS
+# ============================================================
+
+numeric_columns = treated_data.select_dtypes(
+    include=np.number
+).columns.tolist()
+
+correlation = treated_data[
+    numeric_columns
+].corr()
+
+target_correlation = (
+    correlation[target]
+    .drop(target)
+    .sort_values(
+        key=abs,
+        ascending=False
+    )
+    .to_frame("Correlation")
+)
+
+target_correlation["Absolute_Correlation"] = (
+    target_correlation["Correlation"].abs()
+)
+
+display(target_correlation.round(4))
+
+
+# ============================================================
+# 20. TOP-25 CORRELATION HEATMAP
+# ============================================================
+
+top_variables = (
+    target_correlation
+    .head(25)
+    .index
+    .tolist()
+)
+
+heatmap_correlation = treated_data[
+    [target] + top_variables
+].corr()
+
+plt.figure(figsize=(18, 14))
+
+sns.heatmap(
+    heatmap_correlation,
+    cmap="coolwarm",
+    center=0,
+    square=True,
+    linewidths=0.2
+)
+
+plt.title("Correlation Heatmap")
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        project_dir,
+        "02_Output/Correlation/Correlation_Heatmap.png"
+    ),
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+
+
+# ============================================================
+# 21. LITERATURE-BASED VARIABLE REVIEW
+# ============================================================
+
+literature_variables = {
+
+    "Never_Worked_Rate": "Employment history",
+    "Other_Inactive_Rate": "Economic inactivity",
+    "LongTerm_Sick_Disabled_Rate": "Economic inactivity",
+    "Home_Family_Rate": "Economic inactivity",
+    "Student_Rate": "Economic inactivity",
+
+    "No_Qualification_Rate": "Education",
+    "Level4Plus_Qualification_Rate": "Education",
+    "Education_Deprivation_Score": "Education deprivation",
+
+    "Poor_Health_Rate": "Health",
+    "Disability_Rate": "Disability",
+    "Health_Deprivation_Score": "Health deprivation",
+
+    "Migrant_Within_UK_Rate": "Internal migration",
+    "Migrant_Outside_UK_Rate": "International migration",
+
+    "Young_Population_Rate": "Population structure",
+    "Working_Age_Rate": "Population structure",
+    "Elderly_Population_Rate": "Population structure",
+
+    "Owned_Rate": "Housing tenure",
+    "Social_Rented_Rate": "Housing tenure",
+    "Private_Rented_Rate": "Housing tenure",
+
+    "No_Car_Van_Rate": "Transport access",
+
+    "Income_Deprivation_Score": "Income deprivation",
+    "Employment_Deprivation_Score": "Employment deprivation",
+    "Crime_Deprivation_Score": "Crime deprivation",
+    "Housing_Services_Deprivation_Score": "Housing deprivation",
+    "Living_Environment_Deprivation_Score": "Living environment",
+
+    "White_Rate": "Ethnicity",
+    "Asian_Rate": "Ethnicity",
+    "Black_Rate": "Ethnicity",
+
+    "Population_per_km2": "Population density"
+}
+
+literature_variables = {
+    variable: domain
+    for variable, domain in literature_variables.items()
+    if variable in treated_data.columns
+}
+
+selection_table = pd.DataFrame({
+    "Variable":
+        literature_variables.keys(),
+
+    "Domain":
+        literature_variables.values()
+})
+
+selection_table["Correlation"] = (
+    selection_table["Variable"].map(
+        target_correlation["Correlation"]
+    )
+)
+
+selection_table["Absolute_Correlation"] = (
+    selection_table["Correlation"].abs()
+)
+
+selection_table["Literature_Support"] = "Yes"
+selection_table["Statistical_Strength"] = "Weak"
+
+selection_table.loc[
+    selection_table["Absolute_Correlation"] >= 0.30,
+    "Statistical_Strength"
+] = "Moderate"
+
+selection_table.loc[
+    selection_table["Absolute_Correlation"] >= 0.50,
+    "Statistical_Strength"
+] = "Strong"
+
+selection_table = selection_table.sort_values(
+    "Absolute_Correlation",
+    ascending=False
+).reset_index(drop=True)
+
+display(selection_table.round(4))
+
+
+# ============================================================
+# 22. FINAL VARIABLES
+# ============================================================
+
+final_variables = [
+
+    "Never_Worked_Rate",
+
+    "Income_Deprivation_Score",
+    "Crime_Deprivation_Score",
+    "Housing_Services_Deprivation_Score",
+    "Living_Environment_Deprivation_Score",
+
+    "Level4Plus_Qualification_Rate",
+    "Disability_Rate",
+    "Social_Rented_Rate",
+    "No_Car_Van_Rate",
+    "Working_Age_Rate",
+
+    "Migrant_Within_UK_Rate",
+    "Migrant_Outside_UK_Rate",
+
+    "Asian_Rate",
+    "Black_Rate",
+    "Student_Rate",
+    "Population_per_km2"
+]
+
+print("Final predictors:", len(final_variables))
+
+
+# ============================================================
+# 23. FINAL CORRELATION HEATMAP
+# ============================================================
+
+correlation_matrix = treated_data[
+    [target] + final_variables
+].corr()
+
+plt.figure(figsize=(15, 12))
+
+sns.heatmap(
+    correlation_matrix,
+    annot=True,
+    fmt=".2f",
+    cmap="coolwarm",
+    center=0,
+    vmin=-1,
+    vmax=1,
+    linewidths=0.5,
+    linecolor="white",
+    square=True,
+    cbar_kws={
+        "label": "Correlation"
+    },
+    annot_kws={
+        "fontsize": 8
+    }
+)
+
+plt.title(
+    "Correlation Heatmap of Final Selected Variables",
+    fontsize=14,
+    fontweight="bold",
+    pad=15
+)
+
+plt.xticks(
+    rotation=45,
+    ha="right",
+    fontsize=9
+)
+
+plt.yticks(
+    rotation=0,
+    fontsize=9
+)
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        project_dir,
+        "02_Output/Correlation/Final_Selected_Variables/"
+        "Final_Selected_Variables_Heatmap.png"
+    ),
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+
+
+# ============================================================
+# 24. VIF ANALYSIS
+# ============================================================
+
+from statsmodels.tools.tools import add_constant
+from statsmodels.stats.outliers_influence import (
+    variance_inflation_factor
+)
+
+X_vif = treated_data[
+    final_variables
+].copy()
+
+X_vif = X_vif[
+    [
+        column
+        for column in X_vif.columns
+        if X_vif[column].nunique() > 1
+    ]
+]
+
+X_vif = add_constant(X_vif)
+
+vif_results = pd.DataFrame({
+    "Variable": X_vif.columns,
+    "VIF": [
+        variance_inflation_factor(
+            X_vif.values,
+            i
+        )
+        for i in range(
+            X_vif.shape[1]
+        )
+    ]
+})
+
+vif_results = (
+    vif_results[
+        vif_results["Variable"] != "const"
+    ]
+    .sort_values(
+        "VIF",
+        ascending=False
+    )
+    .reset_index(drop=True)
+)
+
+display(vif_results.round(2))
+
+print(
+    "Highest VIF:",
+    round(
+        vif_results["VIF"].max(),
+        2
+    )
+)
+
+
+# ============================================================
+# 25. FINAL MODELLING DATASET
+# ============================================================
+
+model_data = treated_data[
+    final_variables + [target]
+].copy()
+
+print("Rows:", model_data.shape[0])
+print("Columns:", model_data.shape[1])
+print("Predictors:", len(final_variables))
+print("Target:", target)
+
+display(model_data.head())
+
+model_data.to_csv(
+    os.path.join(
+        project_dir,
+        "01_Data/Processed/04_Final_Modelling_Dataset.csv"
+    ),
+    index=False
+)
+
+
+# ============================================================
+# 26. TRAIN-TEST SPLIT
+# ============================================================
+
+from sklearn.model_selection import train_test_split
+
+X = model_data[final_variables]
+y = model_data[target]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.20,
+    random_state=42,
+    shuffle=True
+)
+
+print("Training predictors:", X_train.shape)
+print("Testing predictors:", X_test.shape)
+
+
+# ============================================================
+# 27. STANDARDISE LINEAR REGRESSION
+# ============================================================
+
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+
+X_train_scaled = pd.DataFrame(
+    scaler.fit_transform(X_train),
+    columns=X_train.columns,
+    index=X_train.index
+)
+
+X_test_scaled = pd.DataFrame(
+    scaler.transform(X_test),
+    columns=X_test.columns,
+    index=X_test.index
+)
+
+print("Linear Regression data standardised.")
+
+
+# ============================================================
+# 28. MODEL EVALUATION FUNCTION
+# ============================================================
+
+from sklearn.metrics import (
+    mean_squared_error,
+    mean_absolute_error,
+    r2_score
+)
+
+def evaluate_model(
+    name,
+    actual,
+    predicted,
+    predictors
+):
+
+    rmse = np.sqrt(
+        mean_squared_error(
+            actual,
+            predicted
+        )
+    )
+
+    mae = mean_absolute_error(
+        actual,
+        predicted
+    )
+
+    r2 = r2_score(
+        actual,
+        predicted
+    )
+
+    n = len(actual)
+    p = predictors
+
+    adjusted_r2 = (
+        1 -
+        (1 - r2) *
+        (n - 1) /
+        (n - p - 1)
+    )
+
+    return pd.DataFrame({
+        "Model": [name],
+        "RMSE": [rmse],
+        "MAE": [mae],
+        "R2": [r2],
+        "Adjusted_R2": [adjusted_r2]
+    })
+
+
+# ============================================================
+# 29. MODEL PLOT FUNCTION
+# ============================================================
+
+def create_model_plots(
+    actual,
+    predicted,
+    model_name,
+    save_folder
+):
+
+    minimum = min(
+        actual.min(),
+        predicted.min()
+    )
+
+    maximum = max(
+        actual.max(),
+        predicted.max()
+    )
+
+    plt.figure(figsize=(6, 6))
+
+    plt.scatter(
+        actual,
+        predicted,
+        alpha=0.5,
+        s=15
+    )
+
+    plt.plot(
+        [minimum, maximum],
+        [minimum, maximum],
+        "r--",
+        linewidth=2
+    )
+
+    plt.xlabel(
+        "Actual Unemployment Rate"
+    )
+
+    plt.ylabel(
+        "Predicted Unemployment Rate"
+    )
+
+    plt.title(
+        f"{model_name}: Actual vs Predicted"
+    )
+
+    plt.tight_layout()
+
+    plt.savefig(
+        os.path.join(
+            save_folder,
+            "Actual_vs_Predicted.png"
+        ),
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.show()
+
+    residuals = actual - predicted
+
+    plt.figure(figsize=(6, 5))
+
+    plt.scatter(
+        predicted,
+        residuals,
+        alpha=0.5,
+        s=15
+    )
+
+    plt.axhline(
+        y=0,
+        color="red",
+        linestyle="--"
+    )
+
+    plt.xlabel(
+        "Predicted Unemployment Rate"
+    )
+
+    plt.ylabel("Residuals")
+
+    plt.title(
+        f"{model_name}: Residual Plot"
+    )
+
+    plt.tight_layout()
+
+    plt.savefig(
+        os.path.join(
+            save_folder,
+            "Residual_Plot.png"
+        ),
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.show()
+
+
+# ============================================================
+# 30. LINEAR REGRESSION
+# ============================================================
+
+from sklearn.linear_model import LinearRegression
+
+linear_model = LinearRegression()
+
+linear_model.fit(
+    X_train_scaled,
+    y_train
+)
+
+linear_prediction = linear_model.predict(
+    X_test_scaled
+)
+
+linear_results = evaluate_model(
+    "Linear Regression",
+    y_test,
+    linear_prediction,
+    X_test_scaled.shape[1]
+)
+
+display(linear_results.round(4))
+
+linear_path = os.path.join(
+    project_dir,
+    "02_Output/Machine_Learning/Linear_Regression"
+)
+
+create_model_plots(
+    y_test,
+    linear_prediction,
+    "Linear Regression",
+    linear_path
+)
+
+linear_importance = pd.DataFrame({
+    "Variable":
+        X_train_scaled.columns,
+
+    "Coefficient":
+        linear_model.coef_
+})
+
+linear_importance["Absolute_Coefficient"] = (
+    linear_importance["Coefficient"].abs()
+)
+
+linear_importance = linear_importance.sort_values(
+    "Absolute_Coefficient",
+    ascending=False
+).reset_index(drop=True)
+
+display(linear_importance.round(4))
+
+plt.figure(figsize=(8, 7))
+
+plt.barh(
+    linear_importance["Variable"],
+    linear_importance["Absolute_Coefficient"]
+)
+
+plt.gca().invert_yaxis()
+
+plt.xlabel(
+    "Absolute Standardised Coefficient"
+)
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        linear_path,
+        "Coefficient_Importance.png"
+    ),
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+
+linear_results.to_csv(
+    os.path.join(
+        linear_path,
+        "Linear_Regression_Results.csv"
+    ),
+    index=False
+)
+
+linear_importance.to_csv(
+    os.path.join(
+        linear_path,
+        "Linear_Regression_Coefficients.csv"
+    ),
+    index=False
+)
+
+
+# ============================================================
+# 31. DEFAULT RANDOM FOREST
+# ============================================================
+
+from sklearn.ensemble import RandomForestRegressor
+
+rf_model = RandomForestRegressor(
+    n_estimators=100,
+    max_features="sqrt",
+    random_state=42,
+    n_jobs=-1
+)
+
+rf_model.fit(
+    X_train,
+    y_train
+)
+
+rf_prediction = rf_model.predict(
+    X_test
+)
+
+rf_results = evaluate_model(
+    "Random Forest",
+    y_test,
+    rf_prediction,
+    X_test.shape[1]
+)
+
+display(rf_results.round(4))
+
+
+# ============================================================
+# 32. TUNED RANDOM FOREST
+# ============================================================
+
+from sklearn.model_selection import GridSearchCV
+
+rf_parameter_grid = {
+    "n_estimators": [200, 300],
+    "max_depth": [10, 20, None],
+    "min_samples_split": [2, 5],
+    "min_samples_leaf": [1, 2],
+    "max_features": ["sqrt", 0.7]
+}
+
+rf_grid = GridSearchCV(
+    RandomForestRegressor(
+        random_state=42,
+        n_jobs=-1
+    ),
+    param_grid=rf_parameter_grid,
+    cv=3,
+    scoring="neg_root_mean_squared_error",
+    n_jobs=-1,
+    verbose=1
+)
+
+rf_grid.fit(
+    X_train,
+    y_train
+)
+
+print("Best parameters:")
+print(rf_grid.best_params_)
+
+print(
+    "Best CV RMSE:",
+    round(-rf_grid.best_score_, 4)
+)
+
+rf_tuned_model = rf_grid.best_estimator_
+
+rf_tuned_prediction = rf_tuned_model.predict(
+    X_test
+)
+
+rf_tuned_results = evaluate_model(
+    "Random Forest Tuned",
+    y_test,
+    rf_tuned_prediction,
+    X_test.shape[1]
+)
+
+display(rf_tuned_results.round(4))
+
+rf_path = os.path.join(
+    project_dir,
+    "02_Output/Machine_Learning/Random_Forest"
+)
+
+create_model_plots(
+    y_test,
+    rf_tuned_prediction,
+    "Random Forest Tuned",
+    rf_path
+)
+
+rf_importance = pd.DataFrame({
+    "Variable":
+        X_train.columns,
+
+    "Importance":
+        rf_tuned_model.feature_importances_
+})
+
+rf_importance = rf_importance.sort_values(
+    "Importance",
+    ascending=False
+).reset_index(drop=True)
+
+display(rf_importance.round(4))
+
+plt.figure(figsize=(8, 7))
+
+plt.barh(
+    rf_importance["Variable"],
+    rf_importance["Importance"]
+)
+
+plt.gca().invert_yaxis()
+plt.xlabel("Feature Importance")
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        rf_path,
+        "Feature_Importance.png"
+    ),
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+
+
+# ============================================================
+# 33. INSTALL BOOSTING LIBRARIES
+# ============================================================
+
+!pip install -q xgboost lightgbm
+
+
+# ============================================================
+# 34. DEFAULT XGBOOST
+# ============================================================
+
+from xgboost import XGBRegressor
+
+xgb_model = XGBRegressor(
+    n_estimators=300,
+    learning_rate=0.05,
+    max_depth=6,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    objective="reg:squarederror",
+    random_state=42,
+    n_jobs=-1
+)
+
+xgb_model.fit(
+    X_train,
+    y_train
+)
+
+xgb_prediction = xgb_model.predict(
+    X_test
+)
+
+xgb_results = evaluate_model(
+    "XGBoost",
+    y_test,
+    xgb_prediction,
+    X_test.shape[1]
+)
+
+display(xgb_results.round(4))
+
+
+# ============================================================
+# 35. TUNED XGBOOST
+# ============================================================
+
+xgb_parameter_grid = {
+    "n_estimators": [200, 400],
+    "learning_rate": [0.03, 0.05],
+    "max_depth": [4, 6],
+    "subsample": [0.8, 1.0],
+    "colsample_bytree": [0.8, 1.0]
+}
+
+xgb_grid = GridSearchCV(
+    XGBRegressor(
+        objective="reg:squarederror",
+        random_state=42,
+        n_jobs=-1
+    ),
+    param_grid=xgb_parameter_grid,
+    cv=3,
+    scoring="neg_root_mean_squared_error",
+    n_jobs=-1,
+    verbose=1
+)
+
+xgb_grid.fit(
+    X_train,
+    y_train
+)
+
+print("Best parameters:")
+print(xgb_grid.best_params_)
+
+print(
+    "Best CV RMSE:",
+    round(-xgb_grid.best_score_, 4)
+)
+
+xgb_tuned_model = (
+    xgb_grid.best_estimator_
+)
+
+xgb_tuned_prediction = (
+    xgb_tuned_model.predict(X_test)
+)
+
+xgb_tuned_results = evaluate_model(
+    "XGBoost Tuned",
+    y_test,
+    xgb_tuned_prediction,
+    X_test.shape[1]
+)
+
+display(xgb_tuned_results.round(4))
+
+xgb_path = os.path.join(
+    project_dir,
+    "02_Output/Machine_Learning/XGBoost"
+)
+
+create_model_plots(
+    y_test,
+    xgb_tuned_prediction,
+    "XGBoost Tuned",
+    xgb_path
+)
+
+xgb_importance = pd.DataFrame({
+    "Variable":
+        X_train.columns,
+
+    "Importance":
+        xgb_tuned_model.feature_importances_
+})
+
+xgb_importance = xgb_importance.sort_values(
+    "Importance",
+    ascending=False
+).reset_index(drop=True)
+
+display(xgb_importance.round(4))
+
+plt.figure(figsize=(8, 7))
+
+plt.barh(
+    xgb_importance["Variable"],
+    xgb_importance["Importance"]
+)
+
+plt.gca().invert_yaxis()
+
+plt.xlabel("Feature Importance")
+plt.title(
+    "XGBoost Tuned Feature Importance"
+)
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        xgb_path,
+        "Feature_Importance.png"
+    ),
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+
+
+# ============================================================
+# 36. DEFAULT LIGHTGBM
+# ============================================================
+
+from lightgbm import LGBMRegressor
+
+lgbm_model = LGBMRegressor(
+    n_estimators=300,
+    learning_rate=0.05,
+    num_leaves=31,
+    random_state=42,
+    n_jobs=-1,
+    verbosity=-1
+)
+
+lgbm_model.fit(
+    X_train,
+    y_train
+)
+
+lgbm_prediction = lgbm_model.predict(
+    X_test
+)
+
+lgbm_results = evaluate_model(
+    "LightGBM",
+    y_test,
+    lgbm_prediction,
+    X_test.shape[1]
+)
+
+display(lgbm_results.round(4))
+
+
+# ============================================================
+# 37. TUNED LIGHTGBM
+# ============================================================
+
+lgbm_parameter_grid = {
+    "n_estimators": [200, 400],
+    "learning_rate": [0.03, 0.05],
+    "num_leaves": [20, 31, 50],
+    "max_depth": [-1, 10],
+    "subsample": [0.8, 1.0],
+    "colsample_bytree": [0.8, 1.0]
+}
+
+lgbm_grid = GridSearchCV(
+    LGBMRegressor(
+        random_state=42,
+        n_jobs=-1,
+        verbosity=-1
+    ),
+    param_grid=lgbm_parameter_grid,
+    cv=3,
+    scoring="neg_root_mean_squared_error",
+    n_jobs=-1,
+    verbose=1
+)
+
+lgbm_grid.fit(
+    X_train,
+    y_train
+)
+
+print("Best parameters:")
+print(lgbm_grid.best_params_)
+
+print(
+    "Best CV RMSE:",
+    round(-lgbm_grid.best_score_, 4)
+)
+
+lgbm_tuned_model = (
+    lgbm_grid.best_estimator_
+)
+
+lgbm_tuned_prediction = (
+    lgbm_tuned_model.predict(X_test)
+)
+
+lgbm_tuned_results = evaluate_model(
+    "LightGBM Tuned",
+    y_test,
+    lgbm_tuned_prediction,
+    X_test.shape[1]
+)
+
+display(lgbm_tuned_results.round(4))
+
+lgbm_path = os.path.join(
+    project_dir,
+    "02_Output/Machine_Learning/LightGBM"
+)
+
+create_model_plots(
+    y_test,
+    lgbm_tuned_prediction,
+    "LightGBM Tuned",
+    lgbm_path
+)
+
+lgbm_importance = pd.DataFrame({
+    "Variable":
+        X_train.columns,
+
+    "Importance":
+        lgbm_tuned_model.feature_importances_
+})
+
+lgbm_importance = lgbm_importance.sort_values(
+    "Importance",
+    ascending=False
+).reset_index(drop=True)
+
+display(lgbm_importance)
+
+plt.figure(figsize=(8, 7))
+
+plt.barh(
+    lgbm_importance["Variable"],
+    lgbm_importance["Importance"]
+)
+
+plt.gca().invert_yaxis()
+
+plt.xlabel("Feature Importance")
+plt.title(
+    "Tuned LightGBM Feature Importance"
+)
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        lgbm_path,
+        "Tuned_Feature_Importance.png"
+    ),
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+
+
+# ============================================================
+# 38. MODEL COMPARISON
+# ============================================================
+
+model_comparison = pd.concat([
+    linear_results,
+    rf_results,
+    rf_tuned_results,
+    xgb_results,
+    xgb_tuned_results,
+    lgbm_results,
+    lgbm_tuned_results
+], ignore_index=True)
+
+model_comparison = model_comparison.sort_values(
+    "RMSE",
+    ascending=True
+).reset_index(drop=True)
+
+display(
+    model_comparison.round(4)
+)
+
+model_comparison.to_csv(
+    os.path.join(
+        project_dir,
+        "02_Output/Model_Comparison/Final_Model_Comparison.csv"
+    ),
+    index=False
+)
+
+
+# ============================================================
+# 39. SAVE FEATURE IMPORTANCE TABLES
+# ============================================================
+
+importance_path = os.path.join(
+    project_dir,
+    "02_Output/Feature_Importance"
+)
+
+importance_tables = {
+    "Linear_Regression_Importance.csv":
+        linear_importance,
+
+    "Random_Forest_Importance.csv":
+        rf_importance,
+
+    "XGBoost_Importance.csv":
+        xgb_importance,
+
+    "LightGBM_Importance.csv":
+        lgbm_importance
+}
+
+for file_name, table in importance_tables.items():
+
+    table.to_csv(
+        os.path.join(
+            importance_path,
+            file_name
+        ),
+        index=False
+    )
+
+print("Feature importance tables saved.")
+
+
+# ============================================================
+# 40. SHAP ANALYSIS
+# ============================================================
+
+!pip install -q shap
+
+import shap
+
+shap_sample = X_test.sample(
+    n=min(2000, len(X_test)),
+    random_state=42
+)
+
+explainer = shap.TreeExplainer(
+    lgbm_tuned_model
+)
+
+shap_values = explainer.shap_values(
+    shap_sample
+)
+
+shap.summary_plot(
+    shap_values,
+    shap_sample,
+    show=False
+)
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        project_dir,
+        "02_Output/SHAP/SHAP_Summary_Plot.png"
+    ),
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+
+shap.summary_plot(
+    shap_values,
+    shap_sample,
+    plot_type="bar",
+    show=False
+)
+
+plt.tight_layout()
+
+plt.savefig(
+    os.path.join(
+        project_dir,
+        "02_Output/SHAP/SHAP_Feature_Importance.png"
+    ),
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+
+
+# ============================================================
+# 41. SAVE TRAINED MODELS
+# ============================================================
+
+import joblib
+
+model_folder = os.path.join(
+    project_dir,
+    "03_Models"
+)
+
+joblib.dump(
+    linear_model,
+    os.path.join(
+        model_folder,
+        "Linear_Regression.pkl"
+    )
+)
+
+joblib.dump(
+    scaler,
+    os.path.join(
+        model_folder,
+        "Linear_Regression_Scaler.pkl"
+    )
+)
+
+joblib.dump(
+    rf_tuned_model,
+    os.path.join(
+        model_folder,
+        "Random_Forest_Tuned.pkl"
+    )
+)
+
+joblib.dump(
+    xgb_tuned_model,
+    os.path.join(
+        model_folder,
+        "XGBoost_Tuned.pkl"
+    )
+)
+
+joblib.dump(
+    lgbm_tuned_model,
+    os.path.join(
+        model_folder,
+        "LightGBM_Tuned.pkl"
+    )
+)
+
+print("All trained models saved.")
+
+
+# ============================================================
+# 42. QGIS DATASET
+# ============================================================
+
+qgis_data = treated_data[[
+    "LSOA_Code",
+    "LSOA_Name",
+    "Unemployment_Rate",
+    "Never_Worked_Rate",
+    "Income_Deprivation_Score",
+    "No_Car_Van_Rate"
+]]
+
+display(qgis_data.head())
+
+qgis_data.to_csv(
+    os.path.join(
+        project_dir,
+        "02_Output/QGIS_Unemployment_Data.csv"
+    ),
+    index=False
+)
+
+print("QGIS dataset saved.")
+
+
+# ============================================================
+# 43. FINAL RESULT
+# ============================================================
+
+print("DS7010 MACHINE LEARNING WORKFLOW COMPLETED")
+
+print("\nBest model by RMSE:")
+
+display(
+    model_comparison.head(1).round(4)
+)
