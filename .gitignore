@@ -1,0 +1,5 @@
+.Rhistory
+*.db-journal
+.ipynb_checkpoints/
+__pycache__/
+*.pyc

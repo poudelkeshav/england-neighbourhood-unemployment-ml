@@ -1,739 +1,5 @@
 /* ============================================================
-   DS7010 DISSERTATION - FINAL SQL WORKFLOW
-   ============================================================ */
-
-
-/* ============================================================
-   1. ECONOMIC ACTIVITY
-   Target and inactivity rates
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_economic_activity;
-
-CREATE VIEW vw_economic_activity AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 * Unemployed /
-        (In_Employment + Unemployed),
-        4
-    ) AS Unemployment_Rate,
-
-    ROUND(
-        100.0 * Student /
-        Total_Population_economic,
-        4
-    ) AS Student_Rate,
-
-    ROUND(
-        100.0 * Retired /
-        Total_Population_economic,
-        4
-    ) AS Retired_Rate,
-
-    ROUND(
-        100.0 * Home_Family /
-        Total_Population_economic,
-        4
-    ) AS Home_Family_Rate,
-
-    ROUND(
-        100.0 * LongTerm_Sick_Disabled /
-        Total_Population_economic,
-        4
-    ) AS LongTerm_Sick_Disabled_Rate,
-
-    ROUND(
-        100.0 * Other_Inactive /
-        Total_Population_economic,
-        4
-    ) AS Other_Inactive_Rate
-
-FROM Economic_Activity_Status;
-
-
-/* ============================================================
-   2. AGE
-   Young = 0-19
-   Working age = 20-64
-   Elderly = 65+
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_age;
-
-CREATE VIEW vw_age AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 *
-        (
-            Age_0_4 +
-            Age_5_9 +
-            Age_10_14 +
-            Age_15_19
-        ) /
-        Total_Population_age,
-        4
-    ) AS Young_Population_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Age_20_24 +
-            Age_25_29 +
-            Age_30_34 +
-            Age_35_39 +
-            Age_40_44 +
-            Age_45_49 +
-            Age_50_54 +
-            Age_55_59 +
-            Age_60_64
-        ) /
-        Total_Population_age,
-        4
-    ) AS Working_Age_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Age_65_69 +
-            Age_70_74 +
-            Age_75_79 +
-            Age_80_84 +
-            Age_85_Plus
-        ) /
-        Total_Population_age,
-        4
-    ) AS Elderly_Population_Rate
-
-FROM Age_by_five_year_age_bands;
-
-
-/* ============================================================
-   3. QUALIFICATIONS
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_qualification;
-
-CREATE VIEW vw_qualification AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 * No_Qualifications /
-        Total_Population_qualification,
-        4
-    ) AS No_Qualification_Rate,
-
-    ROUND(
-        100.0 * Level1_Qualification /
-        Total_Population_qualification,
-        4
-    ) AS Level1_Qualification_Rate,
-
-    ROUND(
-        100.0 * Level2_Qualification /
-        Total_Population_qualification,
-        4
-    ) AS Level2_Qualification_Rate,
-
-    ROUND(
-        100.0 * Apprenticeship /
-        Total_Population_qualification,
-        4
-    ) AS Apprenticeship_Rate,
-
-    ROUND(
-        100.0 * Level3_Qualification /
-        Total_Population_qualification,
-        4
-    ) AS Level3_Qualification_Rate,
-
-    ROUND(
-        100.0 * Level4Plus_Qualification /
-        Total_Population_qualification,
-        4
-    ) AS Level4Plus_Qualification_Rate,
-
-    ROUND(
-        100.0 * Other_Qualification /
-        Total_Population_qualification,
-        4
-    ) AS Other_Qualification_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            No_Qualifications +
-            Level1_Qualification
-        ) /
-        Total_Population_qualification,
-        4
-    ) AS Low_Qualification_Rate
-
-FROM Highest_Level_of_Qualification;
-
-
-/* ============================================================
-   4. GENERAL HEALTH
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_health;
-
-CREATE VIEW vw_health AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 *
-        (
-            Very_Good_Health +
-            Good_Health
-        ) /
-        Total_Population_health,
-        4
-    ) AS Good_Health_Rate,
-
-    ROUND(
-        100.0 * Fair_Health /
-        Total_Population_health,
-        4
-    ) AS Fair_Health_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Bad_Health +
-            Very_Bad_Health
-        ) /
-        Total_Population_health,
-        4
-    ) AS Poor_Health_Rate
-
-FROM General_Health;
-
-
-/* ============================================================
-   5. DISABILITY
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_disability;
-
-CREATE VIEW vw_disability AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 * Disabled /
-        Total_Population_disability,
-        4
-    ) AS Disability_Rate,
-
-    ROUND(
-        100.0 * Not_Disabled /
-        Total_Population_disability,
-        4
-    ) AS Not_Disabled_Rate
-
-FROM Disability;
-
-
-/* ============================================================
-   6. MIGRATION
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_migration;
-
-CREATE VIEW vw_migration AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 * Migrant_Within_UK /
-        Total_Population_migration,
-        4
-    ) AS Migrant_Within_UK_Rate,
-
-    ROUND(
-        100.0 * Migrant_Outside_UK /
-        Total_Population_migration,
-        4
-    ) AS Migrant_Outside_UK_Rate
-
-FROM Migrant_indicator;
-
-
-/* ============================================================
-   7. ETHNICITY
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_ethnicity;
-
-CREATE VIEW vw_ethnicity AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 * White /
-        Total_Population_ethinic,
-        4
-    ) AS White_Rate,
-
-    ROUND(
-        100.0 * Asian /
-        Total_Population_ethinic,
-        4
-    ) AS Asian_Rate,
-
-    ROUND(
-        100.0 * Black /
-        Total_Population_ethinic,
-        4
-    ) AS Black_Rate,
-
-    ROUND(
-        100.0 * [Mixed ] /
-        Total_Population_ethinic,
-        4
-    ) AS Mixed_Rate,
-
-    ROUND(
-        100.0 * Other_Ethnic_Group /
-        Total_Population_ethinic,
-        4
-    ) AS Other_Ethnic_Group_Rate
-
-FROM Ethnic_group;
-
-
-/* ============================================================
-   8. CAR OR VAN AVAILABILITY
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_car_availability;
-
-CREATE VIEW vw_car_availability AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 * No_Car_Van /
-        Total_Households_transport,
-        4
-    ) AS No_Car_Van_Rate,
-
-    ROUND(
-        100.0 * One_Car_Van /
-        Total_Households_transport,
-        4
-    ) AS One_Car_Van_Rate,
-
-    ROUND(
-        100.0 * Two_Cars_Vans /
-        Total_Households_transport,
-        4
-    ) AS Two_Cars_Vans_Rate,
-
-    ROUND(
-        100.0 * ThreePlus_Cars_Vans /
-        Total_Households_transport,
-        4
-    ) AS ThreePlus_Cars_Vans_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            One_Car_Van +
-            Two_Cars_Vans +
-            ThreePlus_Cars_Vans
-        ) /
-        Total_Households_transport,
-        4
-    ) AS Any_Car_Van_Rate
-
-FROM Car_or_van_availability;
-
-
-/* ============================================================
-   9. TRAVEL TO WORK
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_travel;
-
-CREATE VIEW vw_travel AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 * Work_From_Home /
-        Total_Workers,
-        4
-    ) AS Work_From_Home_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Underground_Metro +
-            Train +
-            Bus
-        ) /
-        Total_Workers,
-        4
-    ) AS Public_Transport_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Driving_car +
-            Passenger
-        ) /
-        Total_Workers,
-        4
-    ) AS Car_Commute_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Bicycle +
-            On_foot
-        ) /
-        Total_Workers,
-        4
-    ) AS Active_Travel_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Taxi +
-            Motorcycle_scooter +
-            Other_transport
-        ) /
-        Total_Workers,
-        4
-    ) AS Other_Transport_Rate
-
-FROM Travel_to_work;
-
-
-/* ============================================================
-   10. TENURE
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_tenure;
-
-CREATE VIEW vw_tenure AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 * Owned /
-        Total_households,
-        4
-    ) AS Owned_Rate,
-
-    ROUND(
-        100.0 * Shared_ownership /
-        Total_households,
-        4
-    ) AS Shared_Ownership_Rate,
-
-    ROUND(
-        100.0 * Social_rented /
-        Total_households,
-        4
-    ) AS Social_Rented_Rate,
-
-    ROUND(
-        100.0 * Private_rented /
-        Total_households,
-        4
-    ) AS Private_Rented_Rate,
-
-    ROUND(
-        100.0 * Lives_rent_free /
-        Total_households,
-        4
-    ) AS Lives_Rent_Free_Rate
-
-FROM Tenure;
-
-
-/* ============================================================
-   11. ACCOMMODATION
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_accommodation;
-
-CREATE VIEW vw_accommodation AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 *
-        (
-            Detached +
-            Semi_detached +
-            Terraced
-        ) /
-        Total_Households,
-        4
-    ) AS House_Rate,
-
-    ROUND(
-        100.0 * Purpose_Built_Flat /
-        Total_Households,
-        4
-    ) AS Purpose_Built_Flat_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Converted_Shared_House +
-            Other_Converted_Building
-        ) /
-        Total_Households,
-        4
-    ) AS Converted_Building_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Commercial_Building +
-            Caravan_Temporary
-        ) /
-        Total_Households,
-        4
-    ) AS Other_Temporary_Accommodation_Rate
-
-FROM Accommodation_type;
-
-
-/* ============================================================
-   12. NS-SEC
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_nssec;
-
-CREATE VIEW vw_nssec AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 *
-        (
-            [ Higher_managerial] +
-            Lower_Managerial
-        ) /
-        Total_Population_Nssec,
-        4
-    ) AS Managerial_Rate,
-
-    ROUND(
-        100.0 * Intermediate_occupations /
-        Total_Population_Nssec,
-        4
-    ) AS Intermediate_Occupations_Rate,
-
-    ROUND(
-        100.0 * Small_Employers /
-        Total_Population_Nssec,
-        4
-    ) AS Small_Employers_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Lower_Supervisory +
-            [ Semi_routine ] +
-            Routine
-        ) /
-        Total_Population_Nssec,
-        4
-    ) AS Lower_Occupations_Rate,
-
-    ROUND(
-        100.0 * Never_worked /
-        Total_Population_Nssec,
-        4
-    ) AS Never_Worked_Rate,
-
-    ROUND(
-        100.0 * [Full_time _students] /
-        Total_Population_Nssec,
-        4
-    ) AS Full_Time_Students_Rate
-
-FROM NS_SeC;
-
-
-/* ============================================================
-   13. INDUSTRY
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_industry;
-
-CREATE VIEW vw_industry AS
-
-SELECT
-    [ LSOA_Code ] AS LSOA_Code,
-    LSOA_Name,
-
-    ROUND(
-        100.0 *
-        (
-            [Agriculture_Fishing ] +
-            Mining_Quarrying
-        ) /
-        Total_Employed,
-        4
-    ) AS Primary_Industry_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            [ Manufacturing] +
-            Electricity_Gas +
-            Water_Waste +
-            Construction
-        ) /
-        Total_Employed,
-        4
-    ) AS Production_Construction_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            [Wholesale_retail ] +
-            [Transport_and _storage] +
-            Accommodation_Food
-        ) /
-        Total_Employed,
-        4
-    ) AS Consumer_Services_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Information_Communication +
-            Finance_Insurance +
-            [Real_Estate	] +
-            Professional_Technical +
-            Admin_Support
-        ) /
-        Total_Employed,
-        4
-    ) AS Business_Knowledge_Services_Rate,
-
-    ROUND(
-        100.0 *
-        (
-            Public_Admin_Defence +
-            Education +
-            Health_Social_Work
-        ) /
-        Total_Employed,
-        4
-    ) AS Public_Services_Rate,
-
-    ROUND(
-        100.0 * Other_Services /
-        Total_Employed,
-        4
-    ) AS Other_Services_Rate
-
-FROM Industry;
-
-
-/* ============================================================
-   14. POPULATION DENSITY
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_population_density;
-
-CREATE VIEW vw_population_density AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-    Population_per_km2
-
-FROM Population_density;
-
-
-/* ============================================================
-   15. RURAL / URBAN CLASSIFICATION
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_rural_urban;
-
-CREATE VIEW vw_rural_urban AS
-
-SELECT
-    LSOA_Code,
-    RUC21CD,
-    RUC21NM,
-    Urban_rural_flag AS Urban_Rural_Flag
-
-FROM Rural_Urban_Classification;
-
-
-/* ============================================================
-   16. IMD 2019
-   Selected deprivation measures
-   ============================================================ */
-
-DROP VIEW IF EXISTS vw_imd;
-
-CREATE VIEW vw_imd AS
-
-SELECT
-    LSOA_Code,
-    LSOA_Name,
-
-    IMD_Score,
-    IMD_Rank,
-    IMD_Decile,
-
-    Income_Deprivation_Score,
-    Employment_Deprivation_Score,
-    Education_Deprivation_Score,
-    Health_Deprivation_Score,
-    Crime_Deprivation_Score,
-    Housing_Services_Deprivation_Score,
-    Living_Environment_Deprivation_Score
-
-FROM IMD_2019_England_LSOA;
-
-
-/* ============================================================
-   17. FINAL ENGLAND LSOA DATASET
-   Merge all engineered views
+   MERGE ALL 16 VIEWS INTO ONE FINAL ENGLAND LSOA TABLE
    ============================================================ */
 
 DROP TABLE IF EXISTS England_LSOA_Final;
@@ -741,25 +7,32 @@ DROP TABLE IF EXISTS England_LSOA_Final;
 CREATE TABLE England_LSOA_Final AS
 
 SELECT
-
-    /* Identifiers and target */
+    /* --------------------------------------------------------
+       1. IDENTIFIERS AND TARGET VARIABLE
+       -------------------------------------------------------- */
     ea.LSOA_Code,
     ea.LSOA_Name,
     ea.Unemployment_Rate,
 
-    /* Economic activity */
+    /* --------------------------------------------------------
+       2. ECONOMIC ACTIVITY
+       -------------------------------------------------------- */
     ea.Student_Rate,
     ea.Retired_Rate,
     ea.Home_Family_Rate,
     ea.LongTerm_Sick_Disabled_Rate,
     ea.Other_Inactive_Rate,
 
-    /* Age */
+    /* --------------------------------------------------------
+       3. AGE
+       -------------------------------------------------------- */
     age.Young_Population_Rate,
     age.Working_Age_Rate,
     age.Elderly_Population_Rate,
 
-    /* Qualifications */
+    /* --------------------------------------------------------
+       4. QUALIFICATION
+       -------------------------------------------------------- */
     q.No_Qualification_Rate,
     q.Level1_Qualification_Rate,
     q.Level2_Qualification_Rate,
@@ -769,54 +42,73 @@ SELECT
     q.Other_Qualification_Rate,
     q.Low_Qualification_Rate,
 
-    /* Health */
+    /* --------------------------------------------------------
+       5. HEALTH
+       -------------------------------------------------------- */
     h.Good_Health_Rate,
     h.Fair_Health_Rate,
     h.Poor_Health_Rate,
 
-    /* Disability */
+    /* --------------------------------------------------------
+       6. DISABILITY
+       -------------------------------------------------------- */
     d.Disability_Rate,
     d.Not_Disabled_Rate,
 
-    /* Migration */
+    /* --------------------------------------------------------
+       7. MIGRATION
+       -------------------------------------------------------- */
     m.Migrant_Within_UK_Rate,
     m.Migrant_Outside_UK_Rate,
 
-    /* Ethnicity */
+    /* --------------------------------------------------------
+       8. ETHNICITY
+       -------------------------------------------------------- */
     eth.White_Rate,
     eth.Asian_Rate,
     eth.Black_Rate,
     eth.Mixed_Rate,
     eth.Other_Ethnic_Group_Rate,
 
-    /* Car availability */
+    /* --------------------------------------------------------
+       9. CAR OR VAN AVAILABILITY
+       -------------------------------------------------------- */
     car.No_Car_Van_Rate,
     car.One_Car_Van_Rate,
     car.Two_Cars_Vans_Rate,
     car.ThreePlus_Cars_Vans_Rate,
     car.Any_Car_Van_Rate,
 
-    /* Travel */
+    /* --------------------------------------------------------
+       10. TRAVEL TO WORK
+       -------------------------------------------------------- */
     tr.Work_From_Home_Rate,
     tr.Public_Transport_Rate,
     tr.Car_Commute_Rate,
     tr.Active_Travel_Rate,
     tr.Other_Transport_Rate,
 
-    /* Tenure */
+    /* --------------------------------------------------------
+       11. TENURE
+       Corrected complete tenure categories
+       -------------------------------------------------------- */
     ten.Owned_Rate,
     ten.Shared_Ownership_Rate,
     ten.Social_Rented_Rate,
     ten.Private_Rented_Rate,
     ten.Lives_Rent_Free_Rate,
 
-    /* Accommodation */
+    /* --------------------------------------------------------
+       12. ACCOMMODATION
+       -------------------------------------------------------- */
     acc.House_Rate,
     acc.Purpose_Built_Flat_Rate,
     acc.Converted_Building_Rate,
     acc.Other_Temporary_Accommodation_Rate,
 
-    /* NS-SEC */
+    /* --------------------------------------------------------
+       13. NS-SEC
+       -------------------------------------------------------- */
     ns.Managerial_Rate,
     ns.Intermediate_Occupations_Rate,
     ns.Small_Employers_Rate,
@@ -824,7 +116,9 @@ SELECT
     ns.Never_Worked_Rate,
     ns.Full_Time_Students_Rate,
 
-    /* Industry */
+    /* --------------------------------------------------------
+       14. INDUSTRY
+       -------------------------------------------------------- */
     ind.Primary_Industry_Rate,
     ind.Production_Construction_Rate,
     ind.Consumer_Services_Rate,
@@ -832,15 +126,21 @@ SELECT
     ind.Public_Services_Rate,
     ind.Other_Services_Rate,
 
-    /* Population density */
+    /* --------------------------------------------------------
+       15. POPULATION DENSITY
+       -------------------------------------------------------- */
     pd.Population_per_km2,
 
-    /* Rural / urban */
+    /* --------------------------------------------------------
+       16. RURAL / URBAN CLASSIFICATION
+       -------------------------------------------------------- */
     ru.RUC21CD,
     ru.RUC21NM,
     ru.Urban_Rural_Flag,
 
-    /* IMD */
+    /* --------------------------------------------------------
+       17. INDEX OF MULTIPLE DEPRIVATION
+       -------------------------------------------------------- */
     imd.IMD_Score,
     imd.IMD_Rank,
     imd.IMD_Decile,
@@ -903,92 +203,167 @@ WHERE ea.LSOA_Code LIKE 'E%';
 
 
 /* ============================================================
-   18. FINAL VALIDATION
+   FINAL TABLE VALIDATION
    ============================================================ */
 
 
-/* Preview */
+/* 1. Display the first 10 records */
 
 SELECT *
 FROM England_LSOA_Final
 LIMIT 10;
 
 
-/* Total rows */
+/* 2. Count final rows */
 
 SELECT
     COUNT(*) AS Total_Rows
 FROM England_LSOA_Final;
 
 
-/* Unique LSOAs */
+/* 3. Count unique LSOAs */
 
 SELECT
     COUNT(DISTINCT LSOA_Code) AS Unique_LSOAs
 FROM England_LSOA_Final;
 
 
-/* Duplicate LSOAs */
+/* 4. Check duplicate LSOA codes */
 
 SELECT
     LSOA_Code,
     COUNT(*) AS Record_Count
-
 FROM England_LSOA_Final
-
 GROUP BY LSOA_Code
-
 HAVING COUNT(*) > 1;
 
 
-/* Missing identifiers */
+/* 5. Check missing LSOA identifiers */
 
 SELECT
     COUNT(*) AS Missing_LSOA_Codes
-
 FROM England_LSOA_Final
-
 WHERE LSOA_Code IS NULL;
 
 
-/* Number of columns */
+/* 6. Check whether any joined dataset failed to match */
+
+SELECT
+    SUM(CASE WHEN age.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Age,
+
+    SUM(CASE WHEN q.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Qualification,
+
+    SUM(CASE WHEN h.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Health,
+
+    SUM(CASE WHEN d.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Disability,
+
+    SUM(CASE WHEN m.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Migration,
+
+    SUM(CASE WHEN eth.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Ethnicity,
+
+    SUM(CASE WHEN car.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Car_Availability,
+
+    SUM(CASE WHEN tr.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Travel,
+
+    SUM(CASE WHEN ten.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Tenure,
+
+    SUM(CASE WHEN acc.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Accommodation,
+
+    SUM(CASE WHEN ns.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_NSSEC,
+
+    SUM(CASE WHEN ind.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Industry,
+
+    SUM(CASE WHEN pd.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Population_Density,
+
+    SUM(CASE WHEN ru.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_Rural_Urban,
+
+    SUM(CASE WHEN imd.LSOA_Code IS NULL THEN 1 ELSE 0 END)
+        AS Missing_IMD
+
+FROM vw_economic_activity AS ea
+
+LEFT JOIN vw_age AS age
+    ON ea.LSOA_Code = age.LSOA_Code
+
+LEFT JOIN vw_qualification AS q
+    ON ea.LSOA_Code = q.LSOA_Code
+
+LEFT JOIN vw_health AS h
+    ON ea.LSOA_Code = h.LSOA_Code
+
+LEFT JOIN vw_disability AS d
+    ON ea.LSOA_Code = d.LSOA_Code
+
+LEFT JOIN vw_migration AS m
+    ON ea.LSOA_Code = m.LSOA_Code
+
+LEFT JOIN vw_ethnicity AS eth
+    ON ea.LSOA_Code = eth.LSOA_Code
+
+LEFT JOIN vw_car_availability AS car
+    ON ea.LSOA_Code = car.LSOA_Code
+
+LEFT JOIN vw_travel AS tr
+    ON ea.LSOA_Code = tr.LSOA_Code
+
+LEFT JOIN vw_tenure AS ten
+    ON ea.LSOA_Code = ten.LSOA_Code
+
+LEFT JOIN vw_accommodation AS acc
+    ON ea.LSOA_Code = acc.LSOA_Code
+
+LEFT JOIN vw_nssec AS ns
+    ON ea.LSOA_Code = ns.LSOA_Code
+
+LEFT JOIN vw_industry AS ind
+    ON ea.LSOA_Code = ind.LSOA_Code
+
+LEFT JOIN vw_population_density AS pd
+    ON ea.LSOA_Code = pd.LSOA_Code
+
+LEFT JOIN vw_rural_urban AS ru
+    ON ea.LSOA_Code = ru.LSOA_Code
+
+LEFT JOIN vw_imd AS imd
+    ON ea.LSOA_Code = imd.LSOA_Code
+
+WHERE ea.LSOA_Code LIKE 'E%';
+
+
+/* 7. Check the number of columns in the final table */
 
 SELECT
     COUNT(*) AS Total_Columns
-
-FROM pragma_table_info(
-    'England_LSOA_Final'
-);
+FROM pragma_table_info('England_LSOA_Final');
 
 
-/* Table structure */
+/* 8. Display the final table structure */
 
-PRAGMA table_info(
-    England_LSOA_Final
-);
+PRAGMA table_info(England_LSOA_Final);
 
 
-/* Final summary */
+/* 9. Final summary */
 
 SELECT
     COUNT(*) AS Total_Rows,
-
-    COUNT(DISTINCT LSOA_Code)
-        AS Unique_LSOAs,
-
-    COUNT(*) -
-    COUNT(DISTINCT LSOA_Code)
-        AS Duplicate_Rows,
-
-    MIN(Unemployment_Rate)
-        AS Minimum_Unemployment_Rate,
-
-    MAX(Unemployment_Rate)
-        AS Maximum_Unemployment_Rate,
-
-    ROUND(
-        AVG(Unemployment_Rate),
-        4
-    ) AS Average_Unemployment_Rate
-
+    COUNT(DISTINCT LSOA_Code) AS Unique_LSOAs,
+    COUNT(*) - COUNT(DISTINCT LSOA_Code) AS Duplicate_Rows,
+    MIN(Unemployment_Rate) AS Minimum_Unemployment_Rate,
+    MAX(Unemployment_Rate) AS Maximum_Unemployment_Rate,
+    ROUND(AVG(Unemployment_Rate), 4)
+        AS Average_Unemployment_Rate
 FROM England_LSOA_Final;

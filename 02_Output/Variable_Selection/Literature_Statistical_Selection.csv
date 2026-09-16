@@ -1,0 +1,30 @@
+Variable,Domain,Correlation,Absolute_Correlation,Literature_Support,Statistical_Strength
+Income_Deprivation_Score,Income deprivation,0.7980560647584813,0.7980560647584813,Yes,Strong
+Never_Worked_Rate,Employment history,0.793005266313904,0.793005266313904,Yes,Strong
+Owned_Rate,Housing tenure,-0.740310861245207,0.740310861245207,Yes,Strong
+Other_Inactive_Rate,Economic inactivity,0.7361858554751369,0.7361858554751369,Yes,Strong
+Employment_Deprivation_Score,Employment deprivation,0.7200488018652484,0.7200488018652484,Yes,Strong
+No_Car_Van_Rate,Transport access,0.7120817825714009,0.7120817825714009,Yes,Strong
+Home_Family_Rate,Economic inactivity,0.6766086957789096,0.6766086957789096,Yes,Strong
+LongTerm_Sick_Disabled_Rate,Economic inactivity,0.6288745579438043,0.6288745579438043,Yes,Strong
+Social_Rented_Rate,Housing tenure,0.5922093419829071,0.5922093419829071,Yes,Strong
+Crime_Deprivation_Score,Crime deprivation,0.5918679634170976,0.5918679634170976,Yes,Strong
+No_Qualification_Rate,Education,0.5842882955802923,0.5842882955802923,Yes,Strong
+Health_Deprivation_Score,Health deprivation,0.5808682037239934,0.5808682037239934,Yes,Strong
+Black_Rate,Ethnicity,0.5691822146435438,0.5691822146435438,Yes,Strong
+White_Rate,Ethnicity,-0.5651156708687829,0.5651156708687829,Yes,Strong
+Education_Deprivation_Score,Education deprivation,0.5432680504649962,0.5432680504649962,Yes,Strong
+Elderly_Population_Rate,Population structure,-0.514717614027987,0.514717614027987,Yes,Strong
+Poor_Health_Rate,Health,0.499291094218323,0.499291094218323,Yes,Moderate
+Student_Rate,Economic inactivity,0.4794420599489802,0.4794420599489802,Yes,Moderate
+Young_Population_Rate,Population structure,0.4526920353064902,0.4526920353064902,Yes,Moderate
+Population_per_km2,Population density,0.4418569234647039,0.4418569234647039,Yes,Moderate
+Asian_Rate,Ethnicity,0.43383670835800114,0.43383670835800114,Yes,Moderate
+Private_Rented_Rate,Housing tenure,0.3567373388125622,0.3567373388125622,Yes,Moderate
+Level4Plus_Qualification_Rate,Education,-0.29339649512984856,0.29339649512984856,Yes,Weak
+Working_Age_Rate,Population structure,0.2894710036391108,0.2894710036391108,Yes,Weak
+Migrant_Outside_UK_Rate,International migration,0.2854197427895957,0.2854197427895957,Yes,Weak
+Disability_Rate,Disability,0.2717024181301819,0.2717024181301819,Yes,Weak
+Living_Environment_Deprivation_Score,Living environment,0.271394683345912,0.271394683345912,Yes,Weak
+Housing_Services_Deprivation_Score,Housing deprivation,0.18417265226995283,0.18417265226995283,Yes,Weak
+Migrant_Within_UK_Rate,Internal migration,0.06972914014680107,0.06972914014680107,Yes,Weak
